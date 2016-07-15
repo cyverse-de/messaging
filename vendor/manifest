@@ -1,0 +1,29 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/cyverse-de/logcabin",
+			"repository": "https://github.com/cyverse-de/logcabin",
+			"vcs": "git",
+			"revision": "7d501f64e734aea8e7923220b5fcc4642fb01121",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/cyverse-de/model",
+			"repository": "https://github.com/cyverse-de/model",
+			"vcs": "git",
+			"revision": "d696dd45663c7720c9db3efcb700927272da2ae3",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/streadway/amqp",
+			"repository": "https://github.com/streadway/amqp",
+			"vcs": "git",
+			"revision": "56eb08f0d1f9d90936ab1ab4e20ee9b9bf45ce26",
+			"branch": "HEAD",
+			"notests": true
+		}
+	]
+}

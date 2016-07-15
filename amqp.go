@@ -6,12 +6,13 @@ package messaging
 import (
 	"encoding/json"
 	"fmt"
-	"logcabin"
 	"math/rand"
-	"model"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/cyverse-de/logcabin"
+	"github.com/cyverse-de/model"
 
 	"github.com/streadway/amqp"
 )
