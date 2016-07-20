@@ -3,10 +3,11 @@ package messaging
 import (
 	"encoding/json"
 	"fmt"
-	"model"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/cyverse-de/model"
 
 	"github.com/streadway/amqp"
 )
