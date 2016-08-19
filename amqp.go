@@ -79,6 +79,10 @@ var (
 	//RunningState is when a job is running.
 	RunningState JobState = "Running"
 
+	//ImpendingCancellationState is when a job is running but the current step is about
+	//to reach its expiration time.
+	ImpendingCancellationState JobState = "ImpendingCancellation"
+
 	//SucceededState is when a job has successfully completed the required steps.
 	SucceededState JobState = "Completed"
 
