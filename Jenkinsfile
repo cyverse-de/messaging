@@ -12,10 +12,20 @@ node('docker') {
         dockerTestRunner = "test-${env.BUILD_TAG}"
         try {
             stage "Test"
-                sh "docker run --name ${dockerTestRunner} --rm ${dockerRepo}"
+            try {
+                sh "docker run --name ${dockerTestRunner} --rm ${dockerRepo} > test-results.xml"
+            } finally {
+                junit 'test-results.xml'
+
+                sh "docker run --rm --name ${dockerTestCleanup} -v \$(pwd):/build -w /build alpine rm -r test-results.xml"
+            }
         } finally {
             sh returnStatus: true, script: "docker kill ${dockerTestRunner}"
             sh returnStatus: true, script: "docker rm ${dockerTestRunner}"
+
+            sh returnStatus: true, script: "docker kill ${dockerTestCleanup}"
+            sh returnStatus: true, script: "docker rm ${dockerTestCleanup}"
+
             sh returnStatus: true, script: "docker rmi ${dockerRepo}"
         }
     } catch (InterruptedException e) {
