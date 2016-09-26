@@ -10,6 +10,7 @@ node('docker') {
         sh "docker build --rm -t ${dockerRepo} ."
 
         dockerTestRunner = "test-${env.BUILD_TAG}"
+        dockerTestCleanup = "test-cleanup-${env.BUILD_TAG}"
         try {
             stage "Test"
             try {
