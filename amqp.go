@@ -30,9 +30,6 @@ var (
 	//LaunchCommand is the string used in LaunchCo
 	LaunchCommand = "LAUNCH"
 
-	//JobsExchange is the name of the exchange that job related info is passed around.
-	JobsExchange = "jobs"
-
 	//ReindexAllKey is the routing/binding key for full reindex messages.
 	ReindexAllKey = "index.all"
 
