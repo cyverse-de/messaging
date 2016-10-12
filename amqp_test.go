@@ -23,7 +23,7 @@ func GetClient(t *testing.T) *Client {
 	if err != nil {
 		t.Error(err)
 	}
-	client.SetupPublishing(JobsExchange)
+	client.SetupPublishing(exchange())
 	go client.Listen()
 	return client
 }
@@ -36,7 +36,15 @@ func shouldrun() bool {
 }
 
 func uri() string {
-	return "amqp://guest:guest@rabbit:5672/"
+	return "amqp://guest:guest@rabbit:5672/%2fde"
+}
+
+func exchange() string {
+	return "de"
+}
+
+func exchangeType() string {
+	return "topic"
 }
 
 func TestConstants(t *testing.T) {
@@ -111,7 +119,7 @@ func TestClient(t *testing.T) {
 		actual = string(d.Body)
 		coord <- 1
 	}
-	client.AddConsumer(JobsExchange, "topic", "test_queue", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue", key, handler)
 	client.Publish(key, []byte(expected))
 	<-coord
 	if actual != expected {
@@ -133,7 +141,7 @@ func TestSendTimeLimitRequest(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitRequestKey("test")
-	client.AddConsumer(JobsExchange, "topic", "test_queue1", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue1", key, handler)
 	client.SendTimeLimitRequest("test")
 	<-coord
 	req := &TimeLimitRequest{}
@@ -159,7 +167,7 @@ func TestSendTimeLimitResponse(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitResponsesKey("test")
-	client.AddConsumer(JobsExchange, "topic", "test_queue2", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue2", key, handler)
 	client.SendTimeLimitResponse("test", 0)
 	<-coord
 	resp := &TimeLimitResponse{}
@@ -185,7 +193,7 @@ func TestSendTimeLimitDelta(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitDeltaRequestKey("test")
-	client.AddConsumer(JobsExchange, "topic", "test_queue3", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue3", key, handler)
 	client.SendTimeLimitDelta("test", "10s")
 	<-coord
 	delta := &TimeLimitDelta{}
@@ -216,7 +224,7 @@ func TestSendStopRequest(t *testing.T) {
 		coord <- 1
 	}
 	key := StopRequestKey(invID)
-	client.AddConsumer(JobsExchange, "topic", "test_queue4", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue4", key, handler)
 	client.SendStopRequest(invID, "test_user", "this is a test")
 	<-coord
 	req := &StopRequest{}
@@ -239,7 +247,7 @@ func TestCreateQueue(t *testing.T) {
 		return
 	}
 	client := GetClient(t)
-	actual, err := client.CreateQueue("test_queue5", JobsExchange, "test_key5", true, false)
+	actual, err := client.CreateQueue("test_queue5", exchange(), "test_key5", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -259,7 +267,7 @@ func TestQueueExists(t *testing.T) {
 		return
 	}
 	client := GetClient(t)
-	actual, err := client.CreateQueue("test_queue5", JobsExchange, "test_key5", true, false)
+	actual, err := client.CreateQueue("test_queue5", exchange(), "test_key5", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -283,7 +291,7 @@ func TestDeleteQueue(t *testing.T) {
 		return
 	}
 	client := GetClient(t)
-	actual, err := client.CreateQueue("test_queue6", JobsExchange, "test_key5", true, false)
+	actual, err := client.CreateQueue("test_queue6", exchange(), "test_key5", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -298,7 +306,7 @@ func TestDeleteQueue(t *testing.T) {
 		t.Error("Queue 'test_queue6' was not found")
 	}
 
-	actual, err = client.CreateQueue("test_queue7", JobsExchange, "test_key6", true, false)
+	actual, err = client.CreateQueue("test_queue7", exchange(), "test_key6", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -313,7 +321,7 @@ func TestDeleteQueue(t *testing.T) {
 		t.Error("Queue 'test_queue7' was not found")
 	}
 
-	actual, err = client.CreateQueue("test_queue8", JobsExchange, "test_key7", true, false)
+	actual, err = client.CreateQueue("test_queue8", exchange(), "test_key7", true, false)
 	if err != nil {
 		t.Error(err)
 	}
