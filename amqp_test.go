@@ -7,9 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cyverse-de/model"
-
 	"github.com/streadway/amqp"
+	"gopkg.in/cyverse-de/model.v1"
 )
 
 var client *Client
