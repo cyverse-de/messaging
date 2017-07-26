@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/streadway/amqp"
-	"gopkg.in/cyverse-de/model.v1"
 )
 
 var client *Client
@@ -69,19 +68,6 @@ func TestNewStopRequest(t *testing.T) {
 	expected := &StopRequest{Version: 0}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("NewStopRequest returned:\n%#v\n\tinstead of:\n%#v", actual, expected)
-	}
-}
-
-func TestNewLaunchRequest(t *testing.T) {
-	job := &model.Job{}
-	actual := NewLaunchRequest(job)
-	expected := &JobRequest{
-		Version: 0,
-		Job:     job,
-		Command: Launch,
-	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Errorf("NewLaunchRequest returned:\n%#v\n\tinstead of:\n%#v", actual, expected)
 	}
 }
 
