@@ -118,7 +118,7 @@ func TestClient(t *testing.T) {
 		actual = string(d.Body)
 		coord <- 1
 	}
-	client.AddConsumer(exchange(), exchangeType(), "test_queue", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue", key, handler, 0)
 	client.Publish(key, []byte(expected))
 	<-coord
 	if actual != expected {
@@ -140,7 +140,7 @@ func TestSendTimeLimitRequest(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitRequestKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue1", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue1", key, handler, 0)
 	client.SendTimeLimitRequest("test")
 	<-coord
 	req := &TimeLimitRequest{}
@@ -166,7 +166,7 @@ func TestSendTimeLimitResponse(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitResponsesKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue2", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue2", key, handler, 0)
 	client.SendTimeLimitResponse("test", 0)
 	<-coord
 	resp := &TimeLimitResponse{}
@@ -192,7 +192,7 @@ func TestSendTimeLimitDelta(t *testing.T) {
 		coord <- 1
 	}
 	key := TimeLimitDeltaRequestKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue3", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue3", key, handler, 0)
 	client.SendTimeLimitDelta("test", "10s")
 	<-coord
 	delta := &TimeLimitDelta{}
@@ -223,7 +223,7 @@ func TestSendStopRequest(t *testing.T) {
 		coord <- 1
 	}
 	key := StopRequestKey(invID)
-	client.AddConsumer(exchange(), exchangeType(), "test_queue4", key, handler)
+	client.AddConsumer(exchange(), exchangeType(), "test_queue4", key, handler, 0)
 	client.SendStopRequest(invID, "test_user", "this is a test")
 	<-coord
 	req := &StopRequest{}
