@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"gopkg.in/cyverse-de/model.v2"
-
 	"github.com/streadway/amqp"
 )
 
@@ -140,7 +138,7 @@ const (
 
 // JobRequest is a generic request type for job related requests.
 type JobRequest struct {
-	Job     *model.Job
+	Job     interface{}
 	Command Command
 	Message string
 	Version int
@@ -157,12 +155,15 @@ type StopRequest struct {
 // UpdateMessage contains the information needed to broadcast a change in state
 // for a job.
 type UpdateMessage struct {
-	Job     *model.Job
-	Version int
-	State   JobState
-	Message string
-	SentOn  string // Should be the milliseconds since the epoch
-	Sender  string // Should be the hostname of the box sending the message.
+	InvocationID string
+	AppID        string
+	CondorID     string
+	User         string
+	Version      int
+	State        JobState
+	Message      string
+	SentOn       string // Should be the milliseconds since the epoch
+	Sender       string // Should be the hostname of the box sending the message.
 }
 
 // TimeLimitRequest is the message that is sent to road-runner to get it to
@@ -244,16 +245,6 @@ func StopRequestKey(invID string) string {
 // job, but there's no reason that is required to the case.
 func StopQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-stops-request", invID)
-}
-
-// NewLaunchRequest returns a *JobRequest that has been constructed to be a
-// launch request for the provided job.
-func NewLaunchRequest(j *model.Job) *JobRequest {
-	return &JobRequest{
-		Job:     j,
-		Command: Launch,
-		Version: 0,
-	}
 }
 
 // MessageHandler defines a type for amqp.Delivery handlers.
