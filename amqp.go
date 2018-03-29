@@ -136,9 +136,15 @@ const (
 	StatusBadDuration
 )
 
+// JobDetails describes only the fields of a Job required for messages.
+type JobDetails struct {
+	InvocationID string `json:"uuid"`
+	CondorID     string `json:"condor_id"`
+}
+
 // JobRequest is a generic request type for job related requests.
 type JobRequest struct {
-	Job     interface{}
+	Job     JobDetails
 	Command Command
 	Message string
 	Version int
@@ -155,15 +161,12 @@ type StopRequest struct {
 // UpdateMessage contains the information needed to broadcast a change in state
 // for a job.
 type UpdateMessage struct {
-	InvocationID string
-	AppID        string
-	CondorID     string
-	User         string
-	Version      int
-	State        JobState
-	Message      string
-	SentOn       string // Should be the milliseconds since the epoch
-	Sender       string // Should be the hostname of the box sending the message.
+	Job     JobDetails
+	Version int
+	State   JobState
+	Message string
+	SentOn  string // Should be the milliseconds since the epoch
+	Sender  string // Should be the hostname of the box sending the message.
 }
 
 // TimeLimitRequest is the message that is sent to road-runner to get it to
@@ -245,6 +248,16 @@ func StopRequestKey(invID string) string {
 // job, but there's no reason that is required to the case.
 func StopQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-stops-request", invID)
+}
+
+// NewLaunchRequest returns a *JobRequest that has been constructed to be a
+// launch request for the provided job InvocationID.
+func NewLaunchRequest(invocationID string) *JobRequest {
+	return &JobRequest{
+		Job:     JobDetails{InvocationID: invocationID},
+		Command: Launch,
+		Version: 1,
+	}
 }
 
 // MessageHandler defines a type for amqp.Delivery handlers.

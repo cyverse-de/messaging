@@ -70,6 +70,16 @@ func TestNewStopRequest(t *testing.T) {
 		t.Errorf("NewStopRequest returned:\n%#v\n\tinstead of:\n%#v", actual, expected)
 	}
 }
+func TestNewLaunchRequest(t *testing.T) {
+	actual := NewLaunchRequest("")
+	expected := &JobRequest{
+		Version: 1,
+		Command: Launch,
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("NewLaunchRequest returned:\n%#v\n\tinstead of:\n%#v", actual, expected)
+	}
+}
 
 func TestNewClient(t *testing.T) {
 	if !shouldrun() {
