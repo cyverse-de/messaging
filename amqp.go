@@ -490,6 +490,9 @@ func (c *Client) initconsumer(cs *consumer) error {
 			0,                // prefetchSize
 			false,            // global: false => count applied separately to each new consumer on the channel
 		)
+		if err != nil {
+			Error.Printf("Error setting QOS: %v", err)
+		}
 	}
 	err = channel.ExchangeDeclare(
 		cs.exchange,     //name
@@ -500,6 +503,9 @@ func (c *Client) initconsumer(cs *consumer) error {
 		false,           //no-wait
 		nil,             //args
 	)
+	if err != nil {
+		Error.Printf("ExchangeDeclare Error: %v", err)
+	}
 	_, err = channel.QueueDeclare(
 		cs.queue,
 		cs.queueDurable,    //durable
@@ -508,6 +514,9 @@ func (c *Client) initconsumer(cs *consumer) error {
 		false,              //no-wait
 		nil,                //args
 	)
+	if err != nil {
+		Error.Printf("QueueBind Error: %v", err)
+	}
 	for _, key := range cs.keys {
 		err = channel.QueueBind(
 			cs.queue,
