@@ -29,10 +29,10 @@
   branch = "master"
   name = "github.com/streadway/amqp"
 
-[[constraint]]
-  name = "gopkg.in/cyverse-de/model.v2"
-  version = "2.12.0"
-
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "gopkg.in/cyverse-de/model.v3"
+  version = "3.0.0"
