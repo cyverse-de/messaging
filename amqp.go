@@ -17,6 +17,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Logger defines a loggng interface for this module.
 type Logger interface {
 	Print(args ...interface{})
 	Printf(format string, args ...interface{})
