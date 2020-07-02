@@ -79,6 +79,10 @@ var (
 	//response messages.
 	TimeLimitResponseKey = "jobs.timelimits.responses"
 
+	// EmailRequestPublishingKey is the routing/binding key for AMQP request messages
+	// destined for iplant-email.
+	EmailRequestPublishingKey = "email.requests"
+
 	//QueuedState is when a job is queued.
 	QueuedState JobState = "Queued"
 
@@ -169,6 +173,17 @@ type UpdateMessage struct {
 // broadcast its current time limit.
 type TimeLimitRequest struct {
 	InvocationID string
+}
+
+// EmailRequest defines the structure of a request to be sent to iplant-email.
+type EmailRequest struct {
+	TemplateName        string            `json:"template"`
+	TemplateValues      map[string]string `json:"values"`
+	Subject             string            `json:"subject"`
+	ToAddress           string            `json:"to"`
+	CourtesyCopyAddress string            `json:"cc,omitempty"`
+	FromAddress         string            `json:"from-addr,omitempty"`
+	FromName            string            `json:"from-name,omitempty"`
 }
 
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
@@ -618,6 +633,16 @@ func (c *Client) PublishJobUpdate(u *UpdateMessage) error {
 		return err
 	}
 	return c.Publish(UpdatesKey, msgJSON)
+}
+
+// PublishEmailRequest sends a message to the configured exchange with a
+// key of "email.requests"
+func (c *Client) PublishEmailRequest(e *EmailRequest) error {
+	msgJSON, err := json.Marshal(e)
+	if err != nil {
+		return err
+	}
+	return c.Publish(EmailRequestPublishingKey, msgJSON)
 }
 
 // SendTimeLimitRequest sends out a message to the job on the
