@@ -178,13 +178,13 @@ type TimeLimitRequest struct {
 
 // EmailRequest defines the structure of a request to be sent to iplant-email.
 type EmailRequest struct {
-	TemplateName        string            `json:"template"`
-	TemplateValues      map[string]string `json:"values"`
-	Subject             string            `json:"subject"`
-	ToAddress           string            `json:"to"`
-	CourtesyCopyAddress string            `json:"cc,omitempty"`
-	FromAddress         string            `json:"from-addr,omitempty"`
-	FromName            string            `json:"from-name,omitempty"`
+	TemplateName        string                 `json:"template"`
+	TemplateValues      map[string]interface{} `json:"values"`
+	Subject             string                 `json:"subject"`
+	ToAddress           string                 `json:"to"`
+	CourtesyCopyAddress string                 `json:"cc,omitempty"`
+	FromAddress         string                 `json:"from-addr,omitempty"`
+	FromName            string                 `json:"from-name,omitempty"`
 }
 
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
