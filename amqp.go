@@ -191,6 +191,20 @@ type EmailRequest struct {
 	FromName            string                 `json:"from-name,omitempty"`
 }
 
+// NotificationMessage defines the structure of a notification message sent to
+// the Discovery Environment UI.
+type NotificationMessage struct {
+	Deleted       bool                   `json:"deleted"`
+	Email         bool                   `json:"email"`
+	EmailTemplate string                 `json:"email_template"`
+	Message       map[string]interface{} `json:"message"`
+	Payload       map[string]interface{} `json:"payload"`
+	Seen          bool                   `json:"seen"`
+	Subject       string                 `json:"subject"`
+	Type          string                 `json:"type"`
+	User          string                 `json:"user"`
+}
+
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
 // job InvocationID.
 func TimeLimitRequestKey(invID string) string {
@@ -617,13 +631,32 @@ func (c *Client) SetupPublishing(exchange string) error {
 	return err
 }
 
-// Publish sends a message to the configured exchange with a routing key set to
-// the value of 'key'.
-func (c *Client) Publish(key string, body []byte) error {
+// PublishingOpts contains a set of options for publishing AMQP messages.
+type PublishingOpts struct {
+	DeliveryMode uint8
+	ContentType  string
+}
+
+// DefaultPublishingOpts defines the set of publishing options used by default.
+var DefaultPublishingOpts = &PublishingOpts{
+	DeliveryMode: amqp.Persistent,
+	ContentType:  "text/plain",
+}
+
+// JSONPublishingOpts defines the set of publishing options used for JSON message
+// bodies.
+var JSONPublishingOpts = &PublishingOpts{
+	DeliveryMode: amqp.Persistent,
+	ContentType:  "application/json",
+}
+
+// PublishOpts sends a message to the configured exchange with options specified
+// in an options structure.
+func (c *Client) PublishOpts(key string, body []byte, opts *PublishingOpts) error {
 	msg := amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
+		DeliveryMode: opts.DeliveryMode,
 		Timestamp:    time.Now(),
-		ContentType:  "text/plain",
+		ContentType:  opts.ContentType,
 		Body:         body,
 	}
 	err := c.publisher.channel.Publish(
@@ -634,6 +667,12 @@ func (c *Client) Publish(key string, body []byte) error {
 		msg,
 	)
 	return err
+}
+
+// Publish sends a message to the configured exchange with a routing key set to
+// the value of 'key'.
+func (c *Client) Publish(key string, body []byte) error {
+	return c.PublishOpts(key, body, DefaultPublishingOpts)
 }
 
 // PublishJobUpdate sends a mess to the configured exchange with a routing key of
@@ -657,6 +696,18 @@ func (c *Client) PublishEmailRequest(e *EmailRequest) error {
 		return err
 	}
 	return c.Publish(EmailRequestPublishingKey, msgJSON)
+}
+
+// PublishNotificationMessage sends a message to the configured exchange with a
+// key of "notification.{user}", where "{user}" is the username of the person
+// receiving the notification.
+func (c *Client) PublishNotificationMessage(n *NotificationMessage) error {
+	routingKey := fmt.Sprintf("notification.%s", n.User)
+	msgJSON, err := json.Marshal(n)
+	if err != nil {
+		return err
+	}
+	return c.PublishOpts(routingKey, msgJSON, JSONPublishingOpts)
 }
 
 // SendTimeLimitRequest sends out a message to the job on the
