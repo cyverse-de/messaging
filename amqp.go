@@ -194,7 +194,7 @@ type NotificationMessage struct {
 	Email         bool                   `json:"email"`
 	EmailTemplate string                 `json:"email_template"`
 	Message       map[string]interface{} `json:"message"`
-	Payload       map[string]interface{} `json:"payload"`
+	Payload       interface{}            `json:"payload"`
 	Seen          bool                   `json:"seen"`
 	Subject       string                 `json:"subject"`
 	Type          string                 `json:"type"`
