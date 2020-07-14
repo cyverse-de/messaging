@@ -380,7 +380,7 @@ func (c *Client) Listen() {
 		select {
 		case cs := <-c.consumersChan:
 			Info.Println("A new consumer is being added")
-			c.initconsumer(&cs.consumer)
+			_ = c.initconsumer(&cs.consumer)
 			consumers = append(consumers, &cs.consumer)
 			Info.Println("Done adding a new consumer")
 			cs.latch <- 1
@@ -390,7 +390,7 @@ func (c *Client) Listen() {
 				c, _ = NewClient(c.uri, c.Reconnect)
 				c.consumers = consumers
 				for _, cs := range c.consumers {
-					c.initconsumer(cs)
+					_ = c.initconsumer(cs)
 				}
 				// init()
 			} else {
@@ -558,6 +558,10 @@ func (c *Client) initconsumer(cs *consumer) error {
 		false,              //no-wait
 		nil,                //args
 	)
+	if err != nil {
+		Error.Printf("QueueDeclare Error: %v", err)
+	}
+
 	for _, key := range cs.keys {
 		err = channel.QueueBind(
 			cs.queue,
@@ -566,6 +570,9 @@ func (c *Client) initconsumer(cs *consumer) error {
 			false, //no-wait
 			nil,   //args
 		)
+	}
+	if err != nil {
+		Error.Printf("QueueBind Error: %v", err)
 	}
 
 	d, err := channel.Consume(

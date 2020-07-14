@@ -22,16 +22,13 @@ func GetClient(t *testing.T) *Client {
 	if err != nil {
 		t.Error(err)
 	}
-	client.SetupPublishing(exchange())
+	_ = client.SetupPublishing(exchange())
 	go client.Listen()
 	return client
 }
 
 func shouldrun() bool {
-	if os.Getenv("RUN_INTEGRATION_TESTS") != "" {
-		return true
-	}
-	return false
+	return os.Getenv("RUN_INTEGRATION_TESTS") != ""
 }
 
 func uri() string {
@@ -114,12 +111,12 @@ func TestClient(t *testing.T) {
 	coord := make(chan int)
 
 	handler := func(d amqp.Delivery) {
-		d.Ack(false)
+		_ = d.Ack(false)
 		actual = string(d.Body)
 		coord <- 1
 	}
 	client.AddConsumer(exchange(), exchangeType(), "test_queue", key, handler, 0)
-	client.Publish(key, []byte(expected))
+	_ = client.Publish(key, []byte(expected))
 	<-coord
 	if actual != expected {
 		t.Errorf("Handler received %s instead of %s", actual, expected)
@@ -135,13 +132,13 @@ func TestSendTimeLimitRequest(t *testing.T) {
 	var actual []byte
 	coord := make(chan int)
 	handler := func(d amqp.Delivery) {
-		d.Ack(false)
+		_ = d.Ack(false)
 		actual = d.Body
 		coord <- 1
 	}
 	key := TimeLimitRequestKey("test")
 	client.AddConsumer(exchange(), exchangeType(), "test_queue1", key, handler, 0)
-	client.SendTimeLimitRequest("test")
+	_ = client.SendTimeLimitRequest("test")
 	<-coord
 	req := &TimeLimitRequest{}
 	err := json.Unmarshal(actual, req)
@@ -161,13 +158,13 @@ func TestSendTimeLimitResponse(t *testing.T) {
 	var actual []byte
 	coord := make(chan int)
 	handler := func(d amqp.Delivery) {
-		d.Ack(false)
+		_ = d.Ack(false)
 		actual = d.Body
 		coord <- 1
 	}
 	key := TimeLimitResponsesKey("test")
 	client.AddConsumer(exchange(), exchangeType(), "test_queue2", key, handler, 0)
-	client.SendTimeLimitResponse("test", 0)
+	_ = client.SendTimeLimitResponse("test", 0)
 	<-coord
 	resp := &TimeLimitResponse{}
 	err := json.Unmarshal(actual, resp)
@@ -187,13 +184,13 @@ func TestSendTimeLimitDelta(t *testing.T) {
 	var actual []byte
 	coord := make(chan int)
 	handler := func(d amqp.Delivery) {
-		d.Ack(false)
+		_ = d.Ack(false)
 		actual = d.Body
 		coord <- 1
 	}
 	key := TimeLimitDeltaRequestKey("test")
 	client.AddConsumer(exchange(), exchangeType(), "test_queue3", key, handler, 0)
-	client.SendTimeLimitDelta("test", "10s")
+	_ = client.SendTimeLimitDelta("test", "10s")
 	<-coord
 	delta := &TimeLimitDelta{}
 	err := json.Unmarshal(actual, delta)
@@ -218,13 +215,13 @@ func TestSendStopRequest(t *testing.T) {
 	coord := make(chan int)
 	invID := "test"
 	handler := func(d amqp.Delivery) {
-		d.Ack(false)
+		_ = d.Ack(false)
 		actual = d.Body
 		coord <- 1
 	}
 	key := StopRequestKey(invID)
 	client.AddConsumer(exchange(), exchangeType(), "test_queue4", key, handler, 0)
-	client.SendStopRequest(invID, "test_user", "this is a test")
+	_ = client.SendStopRequest(invID, "test_user", "this is a test")
 	<-coord
 	req := &StopRequest{}
 	if err = json.Unmarshal(actual, req); err != nil {
@@ -339,6 +336,9 @@ func TestDeleteQueue(t *testing.T) {
 		t.Error(err)
 	}
 	exists, err = client.QueueExists("test_queue6")
+	if err != nil {
+		t.Error(err)
+	}
 	if exists {
 		t.Error("Queue 'test_queue6' was found")
 	}
@@ -347,6 +347,9 @@ func TestDeleteQueue(t *testing.T) {
 		t.Error(err)
 	}
 	exists, err = client.QueueExists("test_queue7")
+	if err != nil {
+		t.Error(err)
+	}
 	if exists {
 		t.Error("Queue 'test_queue7' was found")
 	}
@@ -355,6 +358,9 @@ func TestDeleteQueue(t *testing.T) {
 		t.Error(err)
 	}
 	exists, err = client.QueueExists("test_queue8")
+	if err != nil {
+		t.Error(err)
+	}
 	if exists {
 		t.Error("Queue 'test_queue8' was found")
 	}
