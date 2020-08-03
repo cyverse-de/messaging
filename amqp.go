@@ -571,6 +571,7 @@ func (c *Client) initconsumer(cs *consumer) error {
 	if err != nil {
 		Error.Printf("QueueDeclare Error: %v", err)
 	}
+
 	for _, key := range cs.keys {
 		err = channel.QueueBind(
 			cs.queue,
