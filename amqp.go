@@ -205,6 +205,14 @@ type NotificationMessage struct {
 	User          string                 `json:"user"`
 }
 
+// WrappedNotificationMessage defines a wrapper around a notification message
+// sent to the Discovery Environment UI. The wrapper contains an unread message
+// count in addition to the message itself.
+type WrappedNotificationMessage struct {
+	Total   int64                `json:"total"`
+	Message *NotificationMessage `json:"message"`
+}
+
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
 // job InvocationID.
 func TimeLimitRequestKey(invID string) string {
@@ -705,8 +713,8 @@ func (c *Client) PublishEmailRequest(e *EmailRequest) error {
 // PublishNotificationMessage sends a message to the configured exchange with a
 // key of "notification.{user}", where "{user}" is the username of the person
 // receiving the notification.
-func (c *Client) PublishNotificationMessage(n *NotificationMessage) error {
-	routingKey := fmt.Sprintf("notification.%s", n.User)
+func (c *Client) PublishNotificationMessage(n *WrappedNotificationMessage) error {
+	routingKey := fmt.Sprintf("notification.%s", n.Message.User)
 	msgJSON, err := json.Marshal(n)
 	if err != nil {
 		return err
