@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -513,6 +514,9 @@ func (c *Client) QueueExists(name string) (bool, error) {
 	}
 	defer channel.Close()
 	if _, err = channel.QueueInspect(name); err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil
