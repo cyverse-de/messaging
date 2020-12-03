@@ -93,145 +93,143 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestClient(t *testing.T) {
+func runPublishingTest(t *testing.T, queue, key string, publish func(*Client), check func([]byte)) {
 	if !shouldrun() {
 		return
 	}
 
-	client := GetClient(t)
-
-	//defer client.Close()
-	key := "tests"
-	actual := ""
-	expected := "this is a test"
+	// Set up the handler function along with a channel to avoid race conditions.
+	actual := make([]byte, 0)
 	coord := make(chan int)
-
 	handler := func(d amqp.Delivery) {
 		_ = d.Ack(false)
-		actual = string(d.Body)
+		actual = d.Body
 		coord <- 1
 	}
-	client.AddConsumer(exchange(), exchangeType(), "test_queue", key, handler, 0)
-	_ = client.Publish(key, []byte(expected))
+
+	// Set up the AMQP client.
+	client := GetClient(t)
+	client.AddConsumer(exchange(), exchangeType(), queue, key, handler, 0)
+
+	// Publish the message and check the value that was actually published.
+	publish(client)
 	<-coord
-	if actual != expected {
-		t.Errorf("Handler received %s instead of %s", actual, expected)
+	check(actual)
+}
+
+func TestClient(t *testing.T) {
+	queue := "test_queue"
+	key := "tests"
+	expected := []byte("this is a test")
+
+	publish := func(c *Client) {
+		_ = c.Publish(key, expected)
 	}
 
+	check := func(actual []byte) {
+		if string(actual) != string(expected) {
+			t.Errorf("handler received %s instead of %s", actual, expected)
+		}
+	}
+
+	runPublishingTest(t, queue, key, publish, check)
 }
 
 func TestSendTimeLimitRequest(t *testing.T) {
-	if !shouldrun() {
-		return
-	}
-	client := GetClient(t)
-	var actual []byte
-	coord := make(chan int)
-	handler := func(d amqp.Delivery) {
-		_ = d.Ack(false)
-		actual = d.Body
-		coord <- 1
-	}
+	queue := "test_queue1"
 	key := TimeLimitRequestKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue1", key, handler, 0)
-	_ = client.SendTimeLimitRequest("test")
-	<-coord
-	req := &TimeLimitRequest{}
-	err := json.Unmarshal(actual, req)
-	if err != nil {
-		t.Error(err)
+
+	publish := func(c *Client) {
+		_ = client.SendTimeLimitRequest("test")
 	}
-	if req.InvocationID != "test" {
-		t.Errorf("TimeLimitRequest's InvocationID was %s instead of test", req.InvocationID)
+
+	check := func(actual []byte) {
+		req := &TimeLimitRequest{}
+		err := json.Unmarshal(actual, req)
+		if err != nil {
+			t.Error(err)
+		}
+		if req.InvocationID != "test" {
+			t.Errorf("TimeLimitRequest's InvocationID was %s instead of test", req.InvocationID)
+		}
 	}
+
+	runPublishingTest(t, queue, key, publish, check)
 }
 
 func TestSendTimeLimitResponse(t *testing.T) {
-	if !shouldrun() {
-		return
-	}
-	client := GetClient(t)
-	var actual []byte
-	coord := make(chan int)
-	handler := func(d amqp.Delivery) {
-		_ = d.Ack(false)
-		actual = d.Body
-		coord <- 1
-	}
+	queue := "test_queue2"
 	key := TimeLimitResponsesKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue2", key, handler, 0)
-	_ = client.SendTimeLimitResponse("test", 0)
-	<-coord
-	resp := &TimeLimitResponse{}
-	err := json.Unmarshal(actual, resp)
-	if err != nil {
-		t.Error(err)
+
+	publish := func(c *Client) {
+		_ = client.SendTimeLimitResponse("test", 0)
 	}
-	if resp.InvocationID != "test" {
-		t.Errorf("TimeLimitRequest's InvocationID was %s instead of test", resp.InvocationID)
+
+	check := func(actual []byte) {
+		resp := &TimeLimitResponse{}
+		err := json.Unmarshal(actual, resp)
+		if err != nil {
+			t.Error(err)
+		}
+		if resp.InvocationID != "test" {
+			t.Errorf("TimeLimitRequest's InvocationID was %s instead of test", resp.InvocationID)
+		}
 	}
+
+	runPublishingTest(t, queue, key, publish, check)
 }
 
 func TestSendTimeLimitDelta(t *testing.T) {
-	if !shouldrun() {
-		return
-	}
-	client := GetClient(t)
-	var actual []byte
-	coord := make(chan int)
-	handler := func(d amqp.Delivery) {
-		_ = d.Ack(false)
-		actual = d.Body
-		coord <- 1
-	}
+	queue := "test_queue3"
 	key := TimeLimitDeltaRequestKey("test")
-	client.AddConsumer(exchange(), exchangeType(), "test_queue3", key, handler, 0)
-	_ = client.SendTimeLimitDelta("test", "10s")
-	<-coord
-	delta := &TimeLimitDelta{}
-	err := json.Unmarshal(actual, delta)
-	if err != nil {
-		t.Error(err)
+
+	publish := func(c *Client) {
+		_ = client.SendTimeLimitDelta("test", "10s")
 	}
-	if delta.InvocationID != "test" {
-		t.Errorf("TimeLimitDelta's InvocationID was %s instead of test", delta.InvocationID)
+
+	check := func(actual []byte) {
+		delta := &TimeLimitDelta{}
+		err := json.Unmarshal(actual, delta)
+		if err != nil {
+			t.Error(err)
+		}
+		if delta.InvocationID != "test" {
+			t.Errorf("TimeLimitDelta's InvocationID was %s instead of test", delta.InvocationID)
+		}
+		if delta.Delta != "10s" {
+			t.Errorf("TimeLimitDelta's Delta was %s instead of 10s", delta.Delta)
+		}
 	}
-	if delta.Delta != "10s" {
-		t.Errorf("TimeLimitDelta's Delta was %s instead of 10s", delta.Delta)
-	}
+
+	runPublishingTest(t, queue, key, publish, check)
 }
 
 func TestSendStopRequest(t *testing.T) {
-	if !shouldrun() {
-		return
-	}
-	client := GetClient(t)
-	var actual []byte
-	var err error
-	coord := make(chan int)
+	queue := "test_queue4"
 	invID := "test"
-	handler := func(d amqp.Delivery) {
-		_ = d.Ack(false)
-		actual = d.Body
-		coord <- 1
-	}
 	key := StopRequestKey(invID)
-	client.AddConsumer(exchange(), exchangeType(), "test_queue4", key, handler, 0)
-	_ = client.SendStopRequest(invID, "test_user", "this is a test")
-	<-coord
-	req := &StopRequest{}
-	if err = json.Unmarshal(actual, req); err != nil {
-		t.Error(err)
+
+	publish := func(c *Client) {
+		_ = client.SendStopRequest(invID, "test_user", "this is a test")
 	}
-	if req.Reason != "this is a test" {
-		t.Errorf("Reason was '%s' instead of '%s'", req.Reason, "this is a test")
+
+	check := func(actual []byte) {
+		req := &StopRequest{}
+		if err := json.Unmarshal(actual, req); err != nil {
+			t.Error(err)
+		}
+		if req.Reason != "this is a test" {
+			t.Errorf("Reason was '%s' instead of '%s'", req.Reason, "this is a test")
+		}
+		if req.InvocationID != invID {
+			t.Errorf("InvocationID was %s instead of %s", req.InvocationID, invID)
+		}
+		if req.Username != "test_user" {
+			t.Errorf("Username was %s instead of %s", req.Username, "test_user")
+		}
 	}
-	if req.InvocationID != invID {
-		t.Errorf("InvocationID was %s instead of %s", req.InvocationID, invID)
-	}
-	if req.Username != "test_user" {
-		t.Errorf("Username was %s instead of %s", req.Username, "test_user")
-	}
+
+	runPublishingTest(t, queue, key, publish, check)
 }
 
 func TestCreateQueue(t *testing.T) {
