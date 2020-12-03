@@ -232,6 +232,107 @@ func TestSendStopRequest(t *testing.T) {
 	runPublishingTest(t, queue, key, publish, check)
 }
 
+func TestPublishJobUpdate(t *testing.T) {
+	queue := "test_job_update_queue"
+	key := UpdatesKey
+
+	expected := &UpdateMessage{
+		Job: JobDetails{
+			InvocationID: "test",
+			CondorID:     "42",
+		},
+		Version: 1,
+		State:   RunningState,
+		Message: "I have found the answer!",
+		Sender:  "Deep Thought",
+	}
+
+	// PublishJobUpdate updates the `SentOn` field as a side-effect.
+	publish := func(c *Client) {
+		_ = client.PublishJobUpdate(expected)
+	}
+
+	check := func(actualBytes []byte) {
+		actual := &UpdateMessage{}
+		if err := json.Unmarshal(actualBytes, actual); err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("acutal job update does not match expected job update: actual = %+v\n", actual)
+		}
+	}
+
+	runPublishingTest(t, queue, key, publish, check)
+}
+
+func TestPublishEmailRequest(t *testing.T) {
+	queue := "test_email_request_queue"
+	key := EmailRequestPublishingKey
+
+	expected := &EmailRequest{
+		TemplateName:        "some_template",
+		TemplateValues:      map[string]interface{}{"foo": "bar"},
+		Subject:             "Something crazy this way comes!",
+		ToAddress:           "somebody@example.org",
+		CourtesyCopyAddress: "somebody.else@example.org",
+		FromAddress:         "somebody.different@example.org",
+		FromName:            "Somebody Different",
+	}
+
+	publish := func(c *Client) {
+		_ = client.PublishEmailRequest(expected)
+	}
+
+	check := func(actualBytes []byte) {
+		actual := &EmailRequest{}
+		if err := json.Unmarshal(actualBytes, actual); err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("actual email request does not match expected email request: actual = %+v\n", actual)
+		}
+	}
+
+	runPublishingTest(t, queue, key, publish, check)
+}
+
+func TestPublishNotificationMessage(t *testing.T) {
+	queue := "test_notification_queue"
+	user := "nobody"
+	key := fmt.Sprintf("notification.%s", user)
+
+	expected := &WrappedNotificationMessage{
+		Total: 42,
+		Message: &NotificationMessage{
+			Deleted:       false,
+			Email:         true,
+			EmailTemplate: "some_template",
+			Message:       map[string]interface{}{"foo": "bar"},
+			Payload:       map[string]interface{}{"baz": "quux"},
+			Seen:          false,
+			Subject:       "Something happened!!!",
+			Type:          "idunno",
+			User:          user,
+		},
+	}
+
+	publish := func(c *Client) {
+		_ = client.PublishNotificationMessage(expected)
+	}
+
+	check := func(actualBytes []byte) {
+		actual := &WrappedNotificationMessage{}
+		if err := json.Unmarshal(actualBytes, actual); err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(actual, expected) {
+			t.Errorf("actual notification does not match expected notification: actual = '%+v'\n", actual)
+		}
+	}
+
+	runPublishingTest(t, queue, key, publish, check)
+}
+
 func TestCreateQueue(t *testing.T) {
 	if !shouldrun() {
 		return
