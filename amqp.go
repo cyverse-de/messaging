@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -203,6 +204,14 @@ type NotificationMessage struct {
 	Subject       string                 `json:"subject"`
 	Type          string                 `json:"type"`
 	User          string                 `json:"user"`
+}
+
+// WrappedNotificationMessage defines a wrapper around a notification message
+// sent to the Discovery Environment UI. The wrapper contains an unread message
+// count in addition to the message itself.
+type WrappedNotificationMessage struct {
+	Total   int64                `json:"total"`
+	Message *NotificationMessage `json:"message"`
 }
 
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
@@ -505,6 +514,9 @@ func (c *Client) QueueExists(name string) (bool, error) {
 	}
 	defer channel.Close()
 	if _, err = channel.QueueInspect(name); err != nil {
+		if strings.Contains(err.Error(), "404") {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil
@@ -705,8 +717,8 @@ func (c *Client) PublishEmailRequest(e *EmailRequest) error {
 // PublishNotificationMessage sends a message to the configured exchange with a
 // key of "notification.{user}", where "{user}" is the username of the person
 // receiving the notification.
-func (c *Client) PublishNotificationMessage(n *NotificationMessage) error {
-	routingKey := fmt.Sprintf("notification.%s", n.User)
+func (c *Client) PublishNotificationMessage(n *WrappedNotificationMessage) error {
+	routingKey := fmt.Sprintf("notification.%s", n.Message.User)
 	msgJSON, err := json.Marshal(n)
 	if err != nil {
 		return err
