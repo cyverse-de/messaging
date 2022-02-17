@@ -15,11 +15,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var (
-	//LaunchCommand is the string used in LaunchCo
-	LaunchCommand = "LAUNCH"
-)
-
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
 // job InvocationID.
 func TimeLimitRequestKey(invID string) string {
