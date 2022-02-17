@@ -400,6 +400,10 @@ func (c *Client) Listen() {
 		case err := <-c.errors:
 			Error.Printf("An error in the connection to the AMQP broker occurred:\n%s", err)
 			if c.Reconnect {
+				closeErr := c.connection.Close()
+				if closeErr != nil && closeErr != amqp.ErrClosed {
+					Error.Printf("An error closing the old connection occurred:\n%s", closeErr)
+				}
 				c, _ = NewClient(c.uri, c.Reconnect)
 				c.consumers = consumers
 				for _, cs := range c.consumers {
