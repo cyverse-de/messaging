@@ -17,6 +17,24 @@ type JobRequest struct {
 	Version int
 }
 
+// NewLaunchRequest returns a *JobRequest that has been constructed to be a
+// launch request for the provided job InvocationID.
+func NewLaunchRequest(invocationID string) *JobRequest {
+	return &JobRequest{
+		Job:     JobDetails{InvocationID: invocationID},
+		Command: Launch,
+		Version: 1,
+	}
+}
+
+// NewStopRequest returns a *JobRequest that has been constructed to be a
+// stop request for a running job.
+func NewStopRequest() *StopRequest {
+	return &StopRequest{
+		Version: 0,
+	}
+}
+
 // StopRequest contains the information needed to stop a job
 type StopRequest struct {
 	Reason       string
@@ -73,4 +91,20 @@ type NotificationMessage struct {
 type WrappedNotificationMessage struct {
 	Total   int64                `json:"total"`
 	Message *NotificationMessage `json:"message"`
+}
+
+// TimeLimitResponse is the message that is sent by road-runner in response
+// to a TimeLimitRequest. It contains the current time limit from road-runner.
+type TimeLimitResponse struct {
+	InvocationID          string
+	MillisecondsRemaining int64
+}
+
+// TimeLimitDelta is the message that is sent to get road-runner to change its
+// time limit. The 'Delta' field contains a string in Go's Duration string
+// format. More info on the format is available here:
+// https://golang.org/pkg/time/#ParseDuration
+type TimeLimitDelta struct {
+	InvocationID string
+	Delta        string
 }

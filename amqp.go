@@ -52,13 +52,6 @@ func TimeLimitRequestQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-tl-request", invID)
 }
 
-// TimeLimitResponse is the message that is sent by road-runner in response
-// to a TimeLimitRequest. It contains the current time limit from road-runner.
-type TimeLimitResponse struct {
-	InvocationID          string
-	MillisecondsRemaining int64
-}
-
 // TimeLimitResponsesKey returns the formatted binding key based on the passed in
 // job InvocationID.
 func TimeLimitResponsesKey(invID string) string {
@@ -69,15 +62,6 @@ func TimeLimitResponsesKey(invID string) string {
 // responses. It is based on the passed in job InvocationID.
 func TimeLimitResponsesQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-tl-response", invID)
-}
-
-// TimeLimitDelta is the message that is sent to get road-runner to change its
-// time limit. The 'Delta' field contains a string in Go's Duration string
-// format. More info on the format is available here:
-// https://golang.org/pkg/time/#ParseDuration
-type TimeLimitDelta struct {
-	InvocationID string
-	Delta        string
 }
 
 // TimeLimitDeltaRequestKey returns the binding key formatted correctly for the
@@ -94,14 +78,6 @@ func TimeLimitDeltaQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-tl-delta", invID)
 }
 
-// NewStopRequest returns a *JobRequest that has been constructed to be a
-// stop request for a running job.
-func NewStopRequest() *StopRequest {
-	return &StopRequest{
-		Version: 0,
-	}
-}
-
 // StopRequestKey returns the binding key formatted correctly for the jobs
 // exchange based on the InvocationID passed in.
 func StopRequestKey(invID string) string {
@@ -113,16 +89,6 @@ func StopRequestKey(invID string) string {
 // job, but there's no reason that is required to the case.
 func StopQueueName(invID string) string {
 	return fmt.Sprintf("road-runner-%s-stops-request", invID)
-}
-
-// NewLaunchRequest returns a *JobRequest that has been constructed to be a
-// launch request for the provided job InvocationID.
-func NewLaunchRequest(invocationID string) *JobRequest {
-	return &JobRequest{
-		Job:     JobDetails{InvocationID: invocationID},
-		Command: Launch,
-		Version: 1,
-	}
 }
 
 // MessageHandler defines a type for amqp.Delivery handlers.
