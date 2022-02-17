@@ -27,7 +27,9 @@ func GetClient(t *testing.T) *Client {
 }
 
 func shouldrun() bool {
-	return os.Getenv("RUN_INTEGRATION_TESTS") != ""
+	sh := os.Getenv("RUN_INTEGRATION_TESTS") != ""
+	fmt.Printf("Running integration tests: %t\n", sh)
+	return sh
 }
 
 func uri() string {
