@@ -400,12 +400,24 @@ func (c *Client) Listen() {
 		case err := <-c.errors:
 			Error.Printf("An error in the connection to the AMQP broker occurred:\n%s", err)
 			if c.Reconnect {
+				closeErr := c.connection.Close()
+				if closeErr != nil && closeErr != amqp.ErrClosed {
+					Error.Printf("An error closing the old connection occurred:\n%s", closeErr)
+				}
 				c, _ = NewClient(c.uri, c.Reconnect)
 				c.consumers = consumers
 				for _, cs := range c.consumers {
-					_ = c.initconsumer(cs)
+					cerr := c.initconsumer(cs)
+					if cerr != nil {
+						Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", cerr)
+					}
 				}
-				// init()
+				if c.publisher != nil {
+					perr := c.SetupPublishing(c.publisher.exchange)
+					if perr != nil {
+						Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", perr)
+					}
+				}
 			} else {
 				os.Exit(-1)
 			}
@@ -549,6 +561,8 @@ func (c *Client) initconsumer(cs *consumer) error {
 	if err != nil {
 		return err
 	}
+	// for consumers, if the channel closes, refresh everything
+	c.errors = channel.NotifyClose(c.errors)
 
 	if cs.prefetchCount > 0 {
 		err = channel.Qos(
@@ -627,6 +641,8 @@ func (c *Client) SetupPublishing(exchange string) error {
 	if err != nil {
 		return err
 	}
+	// If the publishing channel closes, re-establish everything.
+	c.errors = channel.NotifyClose(c.errors)
 	err = channel.ExchangeDeclare(
 		exchange, //name
 		"topic",  //kind
