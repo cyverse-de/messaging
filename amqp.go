@@ -403,9 +403,17 @@ func (c *Client) Listen() {
 				c, _ = NewClient(c.uri, c.Reconnect)
 				c.consumers = consumers
 				for _, cs := range c.consumers {
-					_ = c.initconsumer(cs)
+					err := c.initconsumer(cs)
+					if err != nil {
+						Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", err)
+					}
 				}
-				// init()
+				if c.publisher != nil {
+					err = c.SetupPublishing(c.publisher.exchange)
+					if err != nil {
+						Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", err)
+					}
+				}
 			} else {
 				os.Exit(-1)
 			}
@@ -549,6 +557,8 @@ func (c *Client) initconsumer(cs *consumer) error {
 	if err != nil {
 		return err
 	}
+	// for consumers, if the channel closes, refresh everything
+	c.errors = channel.NotifyClose(c.errors)
 
 	if cs.prefetchCount > 0 {
 		err = channel.Qos(
@@ -627,6 +637,8 @@ func (c *Client) SetupPublishing(exchange string) error {
 	if err != nil {
 		return err
 	}
+	// If the publishing channel closes, re-establish everything.
+	c.errors = channel.NotifyClose(c.errors)
 	err = channel.ExchangeDeclare(
 		exchange, //name
 		"topic",  //kind
