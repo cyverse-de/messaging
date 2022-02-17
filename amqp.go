@@ -403,15 +403,15 @@ func (c *Client) Listen() {
 				c, _ = NewClient(c.uri, c.Reconnect)
 				c.consumers = consumers
 				for _, cs := range c.consumers {
-					err := c.initconsumer(cs)
-					if err != nil {
-						Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", err)
+					cerr := c.initconsumer(cs)
+					if cerr != nil {
+						Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", cerr)
 					}
 				}
 				if c.publisher != nil {
-					err = c.SetupPublishing(c.publisher.exchange)
-					if err != nil {
-						Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", err)
+					perr := c.SetupPublishing(c.publisher.exchange)
+					if perr != nil {
+						Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", perr)
 					}
 				}
 			} else {
