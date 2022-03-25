@@ -4,6 +4,7 @@
 package messaging
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -13,6 +14,9 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TimeLimitRequestKey returns the formatted binding key based on the passed in
@@ -67,10 +71,11 @@ func StopQueueName(invID string) string {
 }
 
 // MessageHandler defines a type for amqp.Delivery handlers.
-type MessageHandler func(amqp.Delivery)
+type MessageHandler func(context.Context, amqp.Delivery)
 
 type aggregationMessage struct {
 	handler  MessageHandler
+	queue    string
 	delivery amqp.Delivery
 }
 
@@ -190,7 +195,12 @@ func (c *Client) Listen() {
 			}
 		case msg := <-c.aggregationChan:
 			go func(deliveryMsg aggregationMessage) {
-				deliveryMsg.handler(deliveryMsg.delivery)
+				ctx := otel.GetTextMapPropagator().Extract(context.Background(), AMQPHeaderCarrier(deliveryMsg.delivery.Headers))
+				tracer := newTracer(otel.GetTracerProvider())
+				ctx, span := tracer.Start(ctx, deliveryMsg.queue+" process", trace.WithSpanKind(trace.SpanKindConsumer))
+				defer span.End()
+
+				deliveryMsg.handler(ctx, deliveryMsg.delivery)
 			}(msg)
 		}
 	}
@@ -394,6 +404,7 @@ func (c *Client) initconsumer(cs *consumer) error {
 		for msg := range d {
 			c.aggregationChan <- aggregationMessage{
 				handler:  cs.handler,
+				queue:    cs.queue,
 				delivery: msg,
 			}
 		}
@@ -449,14 +460,33 @@ var JSONPublishingOpts = &PublishingOpts{
 	ContentType:  "application/json",
 }
 
-// PublishOpts sends a message to the configured exchange with options specified
-// in an options structure.
-func (c *Client) PublishOpts(key string, body []byte, opts *PublishingOpts) error {
+func newTracer(tp trace.TracerProvider) trace.Tracer {
+	return tp.Tracer("github.com/cyverse-de/messaging")
+}
+
+// PublishCtxOpts sends a message to the configured exchange, using context and
+// the options specified
+func (c *Client) PublishContextOpts(ctx context.Context, key string, body []byte, opts *PublishingOpts) error {
+	var tracer trace.Tracer
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		tracer = newTracer(span.TracerProvider())
+	} else {
+		tracer = newTracer(otel.GetTracerProvider())
+	}
+
+	ctx, span := tracer.Start(ctx, c.publisher.exchange+" send", trace.WithSpanKind(trace.SpanKindProducer))
+	defer span.End()
+
+	var headers = make(amqp.Table)
+
+	otel.GetTextMapPropagator().Inject(ctx, AMQPHeaderCarrier(headers))
+
 	msg := amqp.Publishing{
 		DeliveryMode: opts.DeliveryMode,
 		Timestamp:    time.Now(),
 		ContentType:  opts.ContentType,
 		Body:         body,
+		Headers:      headers,
 	}
 	err := c.publisher.channel.Publish(
 		c.publisher.exchange,
@@ -468,10 +498,21 @@ func (c *Client) PublishOpts(key string, body []byte, opts *PublishingOpts) erro
 	return err
 }
 
-// Publish sends a message to the configured exchange with a routing key set to
-// the value of 'key'.
+// PublishCtxOpts sends a message to the configured exchange, using context and
+// default options
+func (c *Client) PublishContext(ctx context.Context, key string, body []byte) error {
+	return c.PublishContextOpts(ctx, key, body, DefaultPublishingOpts)
+}
+
+// PublishOpts sends a message to the configured exchange with options specified
+// in an options structure.
+func (c *Client) PublishOpts(key string, body []byte, opts *PublishingOpts) error {
+	return c.PublishContextOpts(context.Background(), key, body, opts)
+}
+
+// Publish sends a message to the configured exchange.
 func (c *Client) Publish(key string, body []byte) error {
-	return c.PublishOpts(key, body, DefaultPublishingOpts)
+	return c.PublishContextOpts(context.Background(), key, body, DefaultPublishingOpts)
 }
 
 // PublishJobUpdate sends a mess to the configured exchange with a routing key of

@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -103,7 +104,7 @@ func runPublishingTest(t *testing.T, queue, key string, publish func(*Client), c
 	// Set up the handler function along with a channel to avoid race conditions.
 	actual := make([]byte, 0)
 	coord := make(chan int)
-	handler := func(d amqp.Delivery) {
+	handler := func(_ context.Context, d amqp.Delivery) {
 		_ = d.Ack(false)
 		actual = d.Body
 		coord <- 1
