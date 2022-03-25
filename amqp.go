@@ -515,9 +515,9 @@ func (c *Client) Publish(key string, body []byte) error {
 	return c.PublishContextOpts(context.Background(), key, body, DefaultPublishingOpts)
 }
 
-// PublishJobUpdate sends a mess to the configured exchange with a routing key of
+// PublishJobUpdateContext sends a message to the configured exchange with a routing key of
 // "jobs.updates"
-func (c *Client) PublishJobUpdate(u *UpdateMessage) error {
+func (c *Client) PublishJobUpdateContext(context context.Context, u *UpdateMessage) error {
 	if u.SentOn == "" {
 		u.SentOn = strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
 	}
@@ -525,35 +525,47 @@ func (c *Client) PublishJobUpdate(u *UpdateMessage) error {
 	if err != nil {
 		return err
 	}
-	return c.Publish(UpdatesKey, msgJSON)
+	return c.PublishContext(context, UpdatesKey, msgJSON)
 }
 
-// PublishEmailRequest sends a message to the configured exchange with a
+func (c *Client) PublishJobUpdate(u *UpdateMessage) error {
+	return c.PublishJobUpdateContext(context.Background(), u)
+}
+
+// PublishEmailRequestContext sends a message to the configured exchange with a
 // key of "email.requests"
-func (c *Client) PublishEmailRequest(e *EmailRequest) error {
+func (c *Client) PublishEmailRequestContext(context context.Context, e *EmailRequest) error {
 	msgJSON, err := json.Marshal(e)
 	if err != nil {
 		return err
 	}
-	return c.Publish(EmailRequestPublishingKey, msgJSON)
+	return c.PublishContext(context, EmailRequestPublishingKey, msgJSON)
 }
 
-// PublishNotificationMessage sends a message to the configured exchange with a
+func (c *Client) PublishEmailRequest(e *EmailRequest) error {
+	return c.PublishEmailRequestContext(context.Background(), e)
+}
+
+// PublishNotificationMessageContext sends a message to the configured exchange with a
 // key of "notification.{user}", where "{user}" is the username of the person
 // receiving the notification.
-func (c *Client) PublishNotificationMessage(n *WrappedNotificationMessage) error {
+func (c *Client) PublishNotificationMessageContext(context context.Context, n *WrappedNotificationMessage) error {
 	routingKey := fmt.Sprintf("notification.%s", n.Message.User)
 	msgJSON, err := json.Marshal(n)
 	if err != nil {
 		return err
 	}
-	return c.PublishOpts(routingKey, msgJSON, JSONPublishingOpts)
+	return c.PublishContextOpts(context, routingKey, msgJSON, JSONPublishingOpts)
 }
 
-// SendTimeLimitRequest sends out a message to the job on the
+func (c *Client) PublishNotificationMessage(n *WrappedNotificationMessage) error {
+	return c.PublishNotificationMessageContext(context.Background(), n)
+}
+
+// SendTimeLimitRequestContext sends out a message to the job on the
 // "jobs.timelimits.requests.<invocationID>" topic. This should trigger the job
 // to emit a TimeLimitResponse.
-func (c *Client) SendTimeLimitRequest(invID string) error {
+func (c *Client) SendTimeLimitRequestContext(context context.Context, invID string) error {
 	req := &TimeLimitRequest{
 		InvocationID: invID,
 	}
@@ -561,13 +573,18 @@ func (c *Client) SendTimeLimitRequest(invID string) error {
 	if err != nil {
 		return err
 	}
-	return c.Publish(TimeLimitRequestKey(invID), msg)
+	return c.PublishContext(context, TimeLimitRequestKey(invID), msg)
 }
 
-// SendTimeLimitResponse sends out a message to the
+// SendTimeLimitRequest is SendTimeLimitRequestContext with a default context
+func (c *Client) SendTimeLimitRequest(invID string) error {
+	return c.SendTimeLimitRequestContext(context.Background(), invID)
+}
+
+// SendTimeLimitResponseContext sends out a message to the
 // jobs.timelimits.responses.<invocationID> topic containing the remaining time
 // for the job.
-func (c *Client) SendTimeLimitResponse(invID string, timeRemaining int64) error {
+func (c *Client) SendTimeLimitResponseContext(context context.Context, invID string, timeRemaining int64) error {
 	resp := &TimeLimitResponse{
 		InvocationID:          invID,
 		MillisecondsRemaining: timeRemaining,
@@ -576,13 +593,18 @@ func (c *Client) SendTimeLimitResponse(invID string, timeRemaining int64) error 
 	if err != nil {
 		return err
 	}
-	return c.Publish(TimeLimitResponsesKey(invID), msg)
+	return c.PublishContext(context, TimeLimitResponsesKey(invID), msg)
 }
 
-// SendTimeLimitDelta sends out a message to the
+// SendTimeLimitResponse is SendTimeLimitResponseContext with a default context
+func (c *Client) SendTimeLimitResponse(invID string, timeRemaining int64) error {
+	return c.SendTimeLimitResponseContext(context.Background(), invID, timeRemaining)
+}
+
+// SendTimeLimitDeltaContext sends out a message to the
 // jobs.timelimits.deltas.<invocationID> topic containing how the job should
 // adjust its timelimit.
-func (c *Client) SendTimeLimitDelta(invID, delta string) error {
+func (c *Client) SendTimeLimitDeltaContext(context context.Context, invID, delta string) error {
 	d := &TimeLimitDelta{
 		InvocationID: invID,
 		Delta:        delta,
@@ -591,12 +613,17 @@ func (c *Client) SendTimeLimitDelta(invID, delta string) error {
 	if err != nil {
 		return err
 	}
-	return c.Publish(TimeLimitDeltaRequestKey(invID), msg)
+	return c.PublishContext(context, TimeLimitDeltaRequestKey(invID), msg)
 }
 
-// SendStopRequest sends out a message to the jobs.stops.<invocation_id> topic
+// SendTimeLimitDelta is SendTimeLimitDeltaContext with a default context
+func (c *Client) SendTimeLimitDelta(invID, delta string) error {
+	return c.SendTimeLimitDeltaContext(context.Background(), invID, delta)
+}
+
+// SendStopRequestContext sends out a message to the jobs.stops.<invocation_id> topic
 // telling listeners to stop their job.
-func (c *Client) SendStopRequest(invID, user, reason string) error {
+func (c *Client) SendStopRequestContext(context context.Context, invID, user, reason string) error {
 	s := NewStopRequest()
 	s.Username = user
 	s.Reason = reason
@@ -605,5 +632,10 @@ func (c *Client) SendStopRequest(invID, user, reason string) error {
 	if err != nil {
 		return err
 	}
-	return c.Publish(StopRequestKey(invID), msg)
+	return c.PublishContext(context, StopRequestKey(invID), msg)
+}
+
+// SendStopRequest is SendStopRequestContext with a default context
+func (c *Client) SendStopRequest(invID, user, reason string) error {
+	return c.SendStopRequestContext(context.Background(), invID, user, reason)
 }
