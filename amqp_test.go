@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/cyverse-de/model"
 	"github.com/streadway/amqp"
 )
 
@@ -71,9 +72,11 @@ func TestNewStopRequest(t *testing.T) {
 	}
 }
 func TestNewLaunchRequest(t *testing.T) {
-	actual := NewLaunchRequest("")
+	job := &model.Job{}
+	actual := NewLaunchRequest(job)
 	expected := &JobRequest{
-		Version: 1,
+		Version: 0,
+		Job:     job,
 		Command: Launch,
 	}
 	if !reflect.DeepEqual(actual, expected) {
@@ -238,12 +241,10 @@ func TestSendStopRequest(t *testing.T) {
 func TestPublishJobUpdate(t *testing.T) {
 	queue := "test_job_update_queue"
 	key := UpdatesKey
+	job := &model.Job{}
 
 	expected := &UpdateMessage{
-		Job: JobDetails{
-			InvocationID: "test",
-			CondorID:     "42",
-		},
+		Job:     job,
 		Version: 1,
 		State:   RunningState,
 		Message: "I have found the answer!",

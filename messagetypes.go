@@ -3,15 +3,11 @@
 // by RabbitMQ).
 package messaging
 
-// JobDetails describes only the fields of a Job required for messages.
-type JobDetails struct {
-	InvocationID string `json:"uuid"`
-	CondorID     string `json:"condor_id"`
-}
+import "github.com/cyverse-de/model"
 
 // JobRequest is a generic request type for job related requests.
 type JobRequest struct {
-	Job     JobDetails
+	Job     *model.Job
 	Command Command
 	Message string
 	Version int
@@ -19,11 +15,11 @@ type JobRequest struct {
 
 // NewLaunchRequest returns a *JobRequest that has been constructed to be a
 // launch request for the provided job InvocationID.
-func NewLaunchRequest(invocationID string) *JobRequest {
+func NewLaunchRequest(j *model.Job) *JobRequest {
 	return &JobRequest{
-		Job:     JobDetails{InvocationID: invocationID},
+		Job:     j,
 		Command: Launch,
-		Version: 1,
+		Version: 0,
 	}
 }
 
@@ -46,7 +42,7 @@ type StopRequest struct {
 // UpdateMessage contains the information needed to broadcast a change in state
 // for a job.
 type UpdateMessage struct {
-	Job     JobDetails
+	Job     *model.Job
 	Version int
 	State   JobState
 	Message string
