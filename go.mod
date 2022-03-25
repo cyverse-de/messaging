@@ -1,4 +1,4 @@
-module github.com/cyverse-de/messaging
+module github.com/cyverse-de/messaging/v9
 
 go 1.16
 
