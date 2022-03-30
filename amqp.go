@@ -206,8 +206,8 @@ func (c *Client) Listen() {
 					semconv.MessagingProtocolKey.String("AMQP"),
 					semconv.MessagingProtocolVersionKey.String("0.9.1"),
 					semconv.MessagingRabbitmqRoutingKeyKey.String(deliveryMsg.delivery.RoutingKey),
-					semconv.MessagingDestinationKey.String(c.publisher.exchange),
 					semconv.MessagingOperationKey.String("process"),
+					semconv.MessagingDestinationKey.String(deliveryMsg.delivery.Exchange),
 					semconv.MessagingConsumerIDKey.String(deliveryMsg.delivery.ConsumerTag),
 				)
 
