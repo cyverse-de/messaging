@@ -16,6 +16,7 @@ import (
 	"github.com/streadway/amqp"
 
 	"go.opentelemetry.io/otel"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -199,6 +200,16 @@ func (c *Client) Listen() {
 				tracer := newTracer(otel.GetTracerProvider())
 				ctx, span := tracer.Start(ctx, deliveryMsg.queue+" process", trace.WithSpanKind(trace.SpanKindConsumer))
 				defer span.End()
+
+				span.SetAttributes(
+					semconv.MessagingSystemKey.String("rabbitmq"),
+					semconv.MessagingProtocolKey.String("AMQP"),
+					semconv.MessagingProtocolVersionKey.String("0.9.1"),
+					semconv.MessagingRabbitmqRoutingKeyKey.String(deliveryMsg.delivery.RoutingKey),
+					semconv.MessagingDestinationKey.String(c.publisher.exchange),
+					semconv.MessagingOperationKey.String("process"),
+					semconv.MessagingConsumerIDKey.String(deliveryMsg.delivery.ConsumerTag),
+				)
 
 				deliveryMsg.handler(ctx, deliveryMsg.delivery)
 			}(msg)
@@ -476,6 +487,14 @@ func (c *Client) PublishContextOpts(ctx context.Context, key string, body []byte
 
 	ctx, span := tracer.Start(ctx, c.publisher.exchange+" send", trace.WithSpanKind(trace.SpanKindProducer))
 	defer span.End()
+
+	span.SetAttributes(
+		semconv.MessagingSystemKey.String("rabbitmq"),
+		semconv.MessagingProtocolKey.String("AMQP"),
+		semconv.MessagingProtocolVersionKey.String("0.9.1"),
+		semconv.MessagingRabbitmqRoutingKeyKey.String(key),
+		semconv.MessagingDestinationKey.String(c.publisher.exchange),
+	)
 
 	var headers = make(amqp.Table)
 
