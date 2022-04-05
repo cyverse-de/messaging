@@ -16,6 +16,7 @@ import (
 	"github.com/streadway/amqp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -149,48 +150,41 @@ func NewClient(uri string, reconnect bool) (*Client, error) {
 	return c, nil
 }
 
+func (c *Client) doReconnect() {
+	closeErr := c.connection.Close()
+	if closeErr != nil && closeErr != amqp.ErrClosed {
+		Error.Printf("An error closing the old connection occurred:\n%s", closeErr)
+	}
+	c, _ = NewClient(c.uri, c.Reconnect)
+	for _, cs := range c.consumers {
+		cerr := c.initconsumer(cs)
+		if cerr != nil {
+			Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", cerr)
+		}
+	}
+	if c.publisher != nil {
+		perr := c.SetupPublishing(c.publisher.exchange)
+		if perr != nil {
+			Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", perr)
+		}
+	}
+}
+
 // Listen will wait for messages and pass them off to handlers, which run in
 // their own goroutine.
 func (c *Client) Listen() {
-	var consumers []*consumer
-	// init := func() {
-	// 	for _, cs := range c.consumers {
-	// 		c.initconsumer(cs)
-	// 	}
-	// }
-	// init()
-	// for _, cs := range c.consumers {
-	// 	consumers = append(consumers, cs)
-	// }
 	for {
 		select {
 		case cs := <-c.consumersChan:
 			Info.Println("A new consumer is being added")
 			_ = c.initconsumer(&cs.consumer)
-			consumers = append(consumers, &cs.consumer)
+			c.consumers = append(c.consumers, &cs.consumer)
 			Info.Println("Done adding a new consumer")
 			cs.latch <- 1
 		case err := <-c.errors:
 			Error.Printf("An error in the connection to the AMQP broker occurred:\n%s", err)
 			if c.Reconnect {
-				closeErr := c.connection.Close()
-				if closeErr != nil && closeErr != amqp.ErrClosed {
-					Error.Printf("An error closing the old connection occurred:\n%s", closeErr)
-				}
-				c, _ = NewClient(c.uri, c.Reconnect)
-				c.consumers = consumers
-				for _, cs := range c.consumers {
-					cerr := c.initconsumer(cs)
-					if cerr != nil {
-						Error.Printf("An error re-establishing an AMQP consumer occurred:\n%s", cerr)
-					}
-				}
-				if c.publisher != nil {
-					perr := c.SetupPublishing(c.publisher.exchange)
-					if perr != nil {
-						Error.Printf("An error re-establishing AMQP publishing occurred:\n%s", perr)
-					}
-				}
+				c.doReconnect()
 			} else {
 				os.Exit(-1)
 			}
@@ -514,6 +508,13 @@ func (c *Client) PublishContextOpts(ctx context.Context, key string, body []byte
 		false, //immediate
 		msg,
 	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed publishing message")
+	}
+	if err == amqp.ErrClosed && c.Reconnect {
+		c.doReconnect()
+	}
 	return err
 }
 
