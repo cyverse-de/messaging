@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/cyverse-de/model/v6"
+	"github.com/cyverse-de/model/v7"
 	"github.com/streadway/amqp"
 )
 

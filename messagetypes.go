@@ -3,7 +3,7 @@
 // by RabbitMQ).
 package messaging
 
-import "github.com/cyverse-de/model/v6"
+import "github.com/cyverse-de/model/v7"
 
 // JobRequest is a generic request type for job related requests.
 type JobRequest struct {
