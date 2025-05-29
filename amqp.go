@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"

@@ -3,7 +3,7 @@ package messaging
 import (
 	"fmt"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type AMQPHeaderCarrier amqp.Table

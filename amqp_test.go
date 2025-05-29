@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/cyverse-de/model/v8"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var client *Client
