@@ -301,13 +301,21 @@ func (c *Client) CreateQueue(name, exchange, key string, durable, autoDelete boo
 
 // QueueExists returns true if the given queue name exists, false or an error
 // otherwise.
-func (c *Client) QueueExists(name string) (bool, error) {
+func (c *Client) QueueExists(name string, durable, autoDelete bool) (bool, error) {
 	channel, err := c.connection.Channel()
 	if err != nil {
 		return false, err
 	}
 	defer channel.Close()
-	if _, err = channel.QueueInspect(name); err != nil {
+	_, err = channel.QueueDeclarePassive(
+		name,
+		durable,
+		autoDelete,
+		false, // internal
+		false, // no wait
+		nil,   // args
+	)
+	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			return false, nil
 		}
