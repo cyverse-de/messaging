@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/cyverse-de/model/v8"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var client *Client
@@ -35,7 +35,11 @@ func shouldrun() bool {
 }
 
 func uri() string {
-	return "amqp://guest:guest@rabbit:5672/%2fde"
+	uri := os.Getenv("INTEGRATION_TEST_AMQP_URI")
+	if uri == "" {
+		uri = "amqp://guest:guest@rabbit:5672/%2fde"
+	}
+	return uri
 }
 
 func exchange() string {
@@ -349,7 +353,7 @@ func TestCreateQueue(t *testing.T) {
 	if actual == nil {
 		t.Error("channel is nil")
 	}
-	if _, err = actual.QueueInspect("test_queue5"); err != nil {
+	if _, err = actual.QueueDeclarePassive("test_queue5", true, false, false, false, nil); err != nil {
 		t.Error(err)
 	}
 	if err = actual.Close(); err != nil {
@@ -369,7 +373,7 @@ func TestQueueExists(t *testing.T) {
 	if actual == nil {
 		t.Error("channel is nil")
 	}
-	exists, err := client.QueueExists("test_queue5")
+	exists, err := client.QueueExists("test_queue5", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -393,7 +397,7 @@ func TestDeleteQueue(t *testing.T) {
 	if actual == nil {
 		t.Error("channel is nil")
 	}
-	exists, err := client.QueueExists("test_queue6")
+	exists, err := client.QueueExists("test_queue6", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -408,7 +412,7 @@ func TestDeleteQueue(t *testing.T) {
 	if actual == nil {
 		t.Error("channel is nil")
 	}
-	exists, err = client.QueueExists("test_queue7")
+	exists, err = client.QueueExists("test_queue7", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -423,7 +427,7 @@ func TestDeleteQueue(t *testing.T) {
 	if actual == nil {
 		t.Error("channel is nil")
 	}
-	exists, err = client.QueueExists("test_queue8")
+	exists, err = client.QueueExists("test_queue8", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -434,7 +438,7 @@ func TestDeleteQueue(t *testing.T) {
 	if err = client.DeleteQueue("test_queue6"); err != nil {
 		t.Error(err)
 	}
-	exists, err = client.QueueExists("test_queue6")
+	exists, err = client.QueueExists("test_queue6", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -445,7 +449,7 @@ func TestDeleteQueue(t *testing.T) {
 	if err = client.DeleteQueue("test_queue7"); err != nil {
 		t.Error(err)
 	}
-	exists, err = client.QueueExists("test_queue7")
+	exists, err = client.QueueExists("test_queue7", true, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -456,7 +460,7 @@ func TestDeleteQueue(t *testing.T) {
 	if err = client.DeleteQueue("test_queue8"); err != nil {
 		t.Error(err)
 	}
-	exists, err = client.QueueExists("test_queue8")
+	exists, err = client.QueueExists("test_queue8", true, false)
 	if err != nil {
 		t.Error(err)
 	}
