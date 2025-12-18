@@ -213,7 +213,7 @@ func (c *Client) Listen() {
 
 // Close closes the connection to the AMQP broker.
 func (c *Client) Close() {
-	c.connection.Close()
+	_ = c.connection.Close()
 }
 
 // AddConsumerMulti adds a consumer to the list of consumers that need to be created
@@ -306,7 +306,7 @@ func (c *Client) QueueExists(name string, durable, autoDelete bool) (bool, error
 	if err != nil {
 		return false, err
 	}
-	defer channel.Close()
+	defer func() { _ = channel.Close() }()
 	_, err = channel.QueueDeclarePassive(
 		name,
 		durable,
@@ -330,7 +330,7 @@ func (c *Client) DeleteQueue(name string) error {
 	if err != nil {
 		return err
 	}
-	defer channel.Close()
+	defer func() { _ = channel.Close() }()
 	_, err = channel.QueueDelete(name, false, false, false)
 	return err
 }
@@ -341,7 +341,7 @@ func (c *Client) PurgeQueue(name string) error {
 	if err != nil {
 		return err
 	}
-	defer channel.Close()
+	defer func() { _ = channel.Close() }()
 	_, err = channel.QueuePurge(name, true)
 	return err
 }
