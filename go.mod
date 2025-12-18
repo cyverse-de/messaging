@@ -1,6 +1,6 @@
 module github.com/cyverse-de/messaging/v11
 
-go 1.24.0
+go 1.25.5
 
 require (
 	github.com/cyverse-de/model/v8 v8.0.0
