@@ -111,6 +111,7 @@ type Client struct {
 	connection      *amqp.Connection
 	aggregationChan chan aggregationMessage
 	errors          chan *amqp.Error
+	channelErrors   chan *amqp.Error
 	consumers       []*consumer
 	consumersChan   chan consumeradder
 	publisher       *publisher
@@ -160,6 +161,7 @@ func NewClientWithDialer(uri string, reconnect bool, dial DialFunc) (*Client, er
 	c.consumersChan = make(chan consumeradder)
 	c.aggregationChan = make(chan aggregationMessage)
 	c.errors = c.connection.NotifyClose(make(chan *amqp.Error, 16))
+	c.channelErrors = make(chan *amqp.Error, 16)
 	return c, nil
 }
 
@@ -182,6 +184,7 @@ func (c *Client) doReconnect() {
 	// aggregationChan and consumersChan from the original client.
 	c.connection = fresh.connection
 	c.errors = fresh.errors
+	c.channelErrors = fresh.channelErrors
 
 	for _, cs := range c.consumers {
 		cerr := c.initconsumer(cs)
@@ -198,28 +201,41 @@ func (c *Client) doReconnect() {
 }
 
 // forwardChannelErrors registers a NotifyClose on the given AMQP channel and
-// starts a goroutine that forwards any close error into the shared c.errors
-// channel. This replaces the old pattern of overwriting c.errors on each call
-// to initconsumer/SetupPublishing, which meant only the last registration was
-// live.
+// starts a goroutine that forwards any close error into c.channelErrors, which
+// the Listen loop watches alongside the connection-level c.errors.
+//
+// The errors are deliberately not forwarded into c.errors: that channel is
+// registered with Connection.NotifyClose, so the AMQP library closes it during
+// connection shutdown, and a send from this goroutine would race with that
+// close. c.channelErrors is owned by the client and is never closed.
 func (c *Client) forwardChannelErrors(ch *amqp.Channel) {
 	chErrors := ch.NotifyClose(make(chan *amqp.Error, 1))
+	// Capture the destination now so that errors from a channel belonging to
+	// an old connection are not delivered to the connection that replaces it.
+	dest := c.channelErrors
 	go func() {
-		defer func() {
-			// c.errors may have been closed during shutdown; ignore
-			// the resulting panic from a send on closed channel, but
-			// re-panic on any unexpected panic to avoid hiding bugs.
-			if r := recover(); r != nil {
-				if fmt.Sprint(r) == "send on closed channel" {
-					return
-				}
-				panic(r)
-			}
-		}()
 		for err := range chErrors {
-			c.errors <- err
+			select {
+			case dest <- err:
+			default:
+				// The buffer is full, so the Listen loop already has errors
+				// pending that will trigger the same handling.
+				Error.Printf("Dropping AMQP channel error because the error buffer is full:\n%s", err)
+			}
 		}
 	}()
+}
+
+// handleListenError deals with an error reported by the AMQP connection or one
+// of its channels. It reconnects if the client is configured to do so, and
+// otherwise returns an error that the Listen loop should exit with.
+func (c *Client) handleListenError(err *amqp.Error) error {
+	Error.Printf("An error in the connection to the AMQP broker occurred:\n%s", err)
+	if c.Reconnect {
+		c.doReconnect()
+		return nil
+	}
+	return fmt.Errorf("AMQP connection error (reconnect disabled): %w", err)
 }
 
 // Listen waits for messages and passes them off to handlers, which run in
@@ -249,11 +265,12 @@ func (c *Client) ListenWithError() error {
 				// Channel closed or nil error: clean shutdown (e.g. caller called Close()).
 				return nil
 			}
-			Error.Printf("An error in the connection to the AMQP broker occurred:\n%s", err)
-			if c.Reconnect {
-				c.doReconnect()
-			} else {
-				return fmt.Errorf("AMQP connection error (reconnect disabled): %w", err)
+			if lerr := c.handleListenError(err); lerr != nil {
+				return lerr
+			}
+		case err := <-c.channelErrors:
+			if lerr := c.handleListenError(err); lerr != nil {
+				return lerr
 			}
 		case msg := <-c.aggregationChan:
 			go func(deliveryMsg aggregationMessage) {

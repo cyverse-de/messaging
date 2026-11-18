@@ -391,6 +391,37 @@ func TestListenWithError_ReturnsErrorInsteadOfExit(t *testing.T) {
 	}
 }
 
+func TestListenWithError_ReturnsChannelErrors(t *testing.T) {
+	silenceLoggers(t)
+
+	uri, cleanup := startFakeAMQPServer(t)
+	defer cleanup()
+
+	client, err := NewClient(uri, false)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer client.Close()
+
+	// Channel-level errors arrive on channelErrors rather than errors; the
+	// Listen loop has to treat them the same way as connection errors.
+	client.channelErrors <- amqp.ErrClosed
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- client.ListenWithError()
+	}()
+
+	select {
+	case listenErr := <-errCh:
+		if !errors.Is(listenErr, amqp.ErrClosed) {
+			t.Fatalf("ListenWithError returned unexpected error: %v", listenErr)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("ListenWithError did not return after a channel-level error")
+	}
+}
+
 func TestListenWithError_ReturnsNilOnGracefulClose(t *testing.T) {
 	silenceLoggers(t)
 
