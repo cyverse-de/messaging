@@ -3,8 +3,8 @@ module github.com/cyverse-de/messaging/v12
 go 1.27
 
 require (
-	github.com/cyverse-de/model/v10 v10.0.2
-	github.com/rabbitmq/amqp091-go v1.13.0
+	github.com/cyverse-de/model/v10 v10.0.4
+	github.com/rabbitmq/amqp091-go v1.17.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
 )
